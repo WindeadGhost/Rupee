@@ -1,6 +1,7 @@
 using Open.Nat;
 using System.Diagnostics;
 using System.Net;
+using System.Net.NetworkInformation;
 
 namespace Rupee
 {
@@ -11,9 +12,22 @@ namespace Rupee
             InitializeComponent();
         }
 
+        private readonly int startingPort = 45000, endingPort = 65536;
+
+        private int PublicPortUsed = 0, PrivatePortUsed = 0;
+
+        private int myTime = 86400;
+        private DateTime startTime;
+
         bool gotMyIP = false;
 
-        Protocol protocolUsed = Protocol.Udp;
+        private List<int> PortsAlreadyUsed = new();
+
+        private Protocol protocolUsed = Protocol.Udp;
+
+        private Mapping myMap = new(Protocol.Udp, 0, 0);
+
+        private readonly NatDiscoverer discoverer = new();
 
         private void Main_Load(object sender, EventArgs e)
         {
@@ -22,6 +36,7 @@ namespace Rupee
 
             NewPublicPort.Enabled = false;
             ShowAO.Enabled = false;
+            GBAO.Enabled = false;
             OpenPort.Enabled = false;
             ClosePort.Enabled = false;
 
@@ -29,57 +44,117 @@ namespace Rupee
 
             Task.Run(async () =>
             {
+                NatDevice myDevice = await discoverer.DiscoverDeviceAsync(PortMapper.Upnp, new CancellationTokenSource(10000));
+
+                IPAddress ip = IPAddress.Parse("127.0.0.1");
 
                 //Récupérer IP publique
                 while (!gotMyIP)
                 {
-                    var externalIpString = (await new HttpClient().GetStringAsync("http://icanhazip.com"))
-                        .Replace("\\r\\n", "").Replace("\\n", "").Trim();
-                    if (IPAddress.TryParse(externalIpString, out var ipAddress))
+                    ip = await myDevice.GetExternalIPAsync();
+                    Debug.WriteLine("The external IP Address is: {0} ", ip);
+                    if (IPAddress.TryParse(ip.ToString(), out var ipAddress))
                         gotMyIP = true;
-                    Invoke(new Action(() =>
-                    {
-                        MyIp.Text = externalIpString;
-                    }));
                 }
 
                 //Scanner les ports dispos
+                IEnumerable<Mapping> mappings = await myDevice.GetAllMappingsAsync();
+
+                List<Mapping> maps = mappings.ToList();
+
+                for (int i = 0; i < maps.Count; i++)
+                {
+                    Debug.WriteLine(maps[i]);
+
+                    PortsAlreadyUsed.Add(maps[i].PublicPort);
+                }
+
+                List<IPEndPoint> tcpPorts = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().ToList();
+                List<IPEndPoint> udpPorts = IPGlobalProperties.GetIPGlobalProperties().GetActiveUdpListeners().ToList();
+
+                //UDP
+                for (int i = 0; i < udpPorts.Count; i++)
+                {
+                    Debug.WriteLine(udpPorts[i].Port);
+
+                    PortsAlreadyUsed.Add(udpPorts[i].Port);
+                }
+
+                //TCP
+                for (int i = 0; i < tcpPorts.Count; i++)
+                {
+                    Debug.WriteLine(tcpPorts[i].Port);
+
+                    PortsAlreadyUsed.Add(tcpPorts[i].Port);
+                }
+
+                PortsAlreadyUsed = PortsAlreadyUsed.Distinct().ToList();
+
+                PublicPortUsed = RandomPort();
+                PrivatePortUsed = RandomPort();
 
                 Invoke(new Action(() =>
                 {
                     NewPublicPort.Enabled = true;
                     ShowAO.Enabled = true;
                     OpenPort.Enabled = true;
+
+                    MyIp.Text = ip.ToString();
+
+                    PublicPort.Text = PublicPortUsed.ToString();
+                    PrivatePort.Text = PrivatePortUsed.ToString();
                 }));
             });
         }
 
         private void ShowAO_CheckedChanged(object sender, EventArgs e)
         {
-            if (GBAO.Visible)
+            if (GBAO.Enabled == false)
             {
-                GBAO.Visible = false;
-                PublicPort.ReadOnly = true;
-                protocolUsed = Protocol.Udp;
-                UDPRadioButton.Checked = true;
-                this.Size = new Size(535, 220);
+                GBAO.Enabled = true;
+                PublicPort.ReadOnly = false;
             }
             else
             {
-                GBAO.Visible = true;
-                PublicPort.ReadOnly = false;
-                this.Size = new Size(535, 475);
+                GBAO.Enabled = false;
+                protocolUsed = Protocol.Udp;
+                UDPRadioButton.Checked = true;
+                setHours.Value = 24;
+                setMinutes.Value = 0;
+                setSeconds.Value = 0;
+                PublicPort.ReadOnly = true;
             }
         }
 
         private void NewPublicPort_Click(object sender, EventArgs e)
         {
-            Debug.WriteLine("Nouveau port public");
+            if (ShowAO.Checked)
+            {
+                PublicPortUsed = RandomPort();
+                PublicPort.Text = PublicPortUsed.ToString();
+            }
+            else
+            {
+                PublicPortUsed = RandomPort();
+                PrivatePortUsed = RandomPort();
+
+                PublicPort.Text = PublicPortUsed.ToString();
+                PrivatePort.Text = PrivatePortUsed.ToString();
+            }
         }
 
         private void NewPrivatePort_Click(object sender, EventArgs e)
         {
-            Debug.WriteLine("Nouveau port privé");
+            PrivatePortUsed = RandomPort();
+            PrivatePort.Text = PrivatePortUsed.ToString();
+        }
+
+        private int RandomPort()
+        {
+            var range = Enumerable.Range(startingPort, endingPort).Where(i => !PortsAlreadyUsed.Contains(i)).Where(i => !PublicPortUsed.Equals(i)).Where(i => !PrivatePortUsed.Equals(i));
+
+            int index = new Random().Next(1, 20536 - PortsAlreadyUsed.Count);
+            return range.ElementAt(index);
         }
 
         private void TCPRadioButton_CheckedChanged(object sender, EventArgs e)
@@ -96,11 +171,23 @@ namespace Rupee
 
         private void OpenPort_Click(object sender, EventArgs e)
         {
-
             if (ShowAO.Checked)
             {
-                //Récupérer le temps de validité d'ouverture du port
+                myTime = (int)((setHours.Value * 60 * 60) + (setMinutes.Value * 60) + setSeconds.Value);
+
+                if (myTime > 86400)
+                    myTime = 86400;
             }
+
+            Task.Run(async () =>
+            {
+                NatDevice myDevice = await discoverer.DiscoverDeviceAsync(PortMapper.Upnp, new CancellationTokenSource(10000));
+                myMap = new(protocolUsed, IPAddress.None, PrivatePortUsed, PublicPortUsed, myTime, "Rupee");
+                await myDevice.CreatePortMapAsync(myMap); //Création de la redirection
+            });
+
+            startTime = DateTime.Now;
+            RupeeTimer.Start();
 
             OpenPort.Enabled = false;
             ClosePort.Enabled = true;
@@ -121,6 +208,20 @@ namespace Rupee
 
         private void ClosePort_Click(object sender, EventArgs e)
         {
+            StopPort();
+        }
+
+        private void StopPort()
+        {
+            RupeeTimer.Stop();
+            RemainingTime.Text = "00:00:00";
+
+            Task.Run(async () =>
+            {
+                NatDevice myDevice = await discoverer.DiscoverDeviceAsync(PortMapper.Upnp, new CancellationTokenSource(10000));
+                await myDevice.DeletePortMapAsync(myMap);
+            });
+
             OpenPort.Enabled = true;
             ClosePort.Enabled = false;
 
@@ -140,17 +241,39 @@ namespace Rupee
             setSeconds.Enabled = true;
         }
 
+        private void RupeeTimer_Tick(object sender, EventArgs e)
+        {
+            int elapsedSeconds = (int)(DateTime.Now - startTime).TotalSeconds;
+            int remainingSeconds = myTime - elapsedSeconds;
+
+            if (remainingSeconds <= 0)
+            {
+                StopPort();
+            }
+
+            TimeSpan t = TimeSpan.FromSeconds(remainingSeconds);
+
+            RemainingTime.Text = string.Format("{0:D2}:{1:D2}:{2:D2}",
+                t.Hours,
+                t.Minutes,
+                t.Seconds);
+        }
+
+        private void MainWin_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            StopPort();
+        }
+
+        private void PrivatePort_TextChanged(object sender, EventArgs e)
+        {
+            PrivatePortUsed = int.Parse(PrivatePort.Text);
+        }
+
+        private void PublicPort_TextChanged(object sender, EventArgs e)
+        {
+            PublicPortUsed = int.Parse(PublicPort.Text);
+        }
 
 
-        /*
-         * Debug.WriteLine("Coucou");
-            int port = 9050; //Choisir un port inutilisé
-            NatDiscoverer discoverer = new NatDiscoverer();
-            CancellationTokenSource cts = new CancellationTokenSource(10000); //temps de validité pour la redirection
-            NatDevice device = await discoverer.DiscoverDeviceAsync(PortMapper.Upnp, cts); //Osef
-            Mapping map = new(Protocol.Udp, port, port, "Test pour voir"); //Port public et privé
-            await device.CreatePortMapAsync(map); //Création de la redirection
-            //await device.DeletePortMapAsync(map); //Suppression de la redirection
-            Debug.WriteLine($"Created {map}"); //Infos du map*/
     }
 }
