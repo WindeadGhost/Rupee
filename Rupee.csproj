@@ -6,7 +6,13 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>aleatoire2.ico</ApplicationIcon>
+    <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="aleatoire2.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Open.Nat" Version="2.1.0" />

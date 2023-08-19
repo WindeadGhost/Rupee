@@ -31,9 +31,6 @@ namespace Rupee
 
         private void Main_Load(object sender, EventArgs e)
         {
-            //Ne pas oublier de changer la taille de la fenetre en 535;260
-            //et de masquer  les options avancées
-
             NewPublicPort.Enabled = false;
             ShowAO.Enabled = false;
             GBAO.Enabled = false;
@@ -52,7 +49,6 @@ namespace Rupee
                 while (!gotMyIP)
                 {
                     ip = await myDevice.GetExternalIPAsync();
-                    Debug.WriteLine("The external IP Address is: {0} ", ip);
                     if (IPAddress.TryParse(ip.ToString(), out var ipAddress))
                         gotMyIP = true;
                 }
@@ -64,8 +60,6 @@ namespace Rupee
 
                 for (int i = 0; i < maps.Count; i++)
                 {
-                    Debug.WriteLine(maps[i]);
-
                     PortsAlreadyUsed.Add(maps[i].PublicPort);
                 }
 
@@ -75,16 +69,12 @@ namespace Rupee
                 //UDP
                 for (int i = 0; i < udpPorts.Count; i++)
                 {
-                    Debug.WriteLine(udpPorts[i].Port);
-
                     PortsAlreadyUsed.Add(udpPorts[i].Port);
                 }
 
                 //TCP
                 for (int i = 0; i < tcpPorts.Count; i++)
                 {
-                    Debug.WriteLine(tcpPorts[i].Port);
-
                     PortsAlreadyUsed.Add(tcpPorts[i].Port);
                 }
 
@@ -171,39 +161,46 @@ namespace Rupee
 
         private void OpenPort_Click(object sender, EventArgs e)
         {
-            if (ShowAO.Checked)
+            if (PrivatePort.Text.Length >= 4 && int.Parse(PrivatePort.Text) >= startingPort && int.Parse(PrivatePort.Text) < endingPort && int.Parse(PublicPort.Text) > startingPort && int.Parse(PublicPort.Text) < endingPort)
             {
-                myTime = (int)((setHours.Value * 60 * 60) + (setMinutes.Value * 60) + setSeconds.Value);
+                if (ShowAO.Checked)
+                {
+                    myTime = (int)((setHours.Value * 60 * 60) + (setMinutes.Value * 60) + setSeconds.Value);
 
-                if (myTime > 86400)
-                    myTime = 86400;
+                    if (myTime > 86400)
+                        myTime = 86400;
+                }
+
+                Task.Run(async () =>
+                {
+                    NatDevice myDevice = await discoverer.DiscoverDeviceAsync(PortMapper.Upnp, new CancellationTokenSource(10000));
+                    myMap = new(protocolUsed, IPAddress.None, PrivatePortUsed, PublicPortUsed, myTime, "Rupee");
+                    await myDevice.CreatePortMapAsync(myMap); //Création de la redirection
+                });
+
+                startTime = DateTime.Now;
+                RupeeTimer.Start();
+
+                OpenPort.Enabled = false;
+                ClosePort.Enabled = true;
+
+                PublicPort.ReadOnly = true;
+                NewPublicPort.Enabled = false;
+
+                PrivatePort.ReadOnly = true;
+                NewPrivatePort.Enabled = false;
+
+                UDPRadioButton.Enabled = false;
+                TCPRadioButton.Enabled = false;
+
+                setHours.Enabled = false;
+                setMinutes.Enabled = false;
+                setSeconds.Enabled = false;
             }
-
-            Task.Run(async () =>
+            else
             {
-                NatDevice myDevice = await discoverer.DiscoverDeviceAsync(PortMapper.Upnp, new CancellationTokenSource(10000));
-                myMap = new(protocolUsed, IPAddress.None, PrivatePortUsed, PublicPortUsed, myTime, "Rupee");
-                await myDevice.CreatePortMapAsync(myMap); //Création de la redirection
-            });
-
-            startTime = DateTime.Now;
-            RupeeTimer.Start();
-
-            OpenPort.Enabled = false;
-            ClosePort.Enabled = true;
-
-            PublicPort.ReadOnly = true;
-            NewPublicPort.Enabled = false;
-
-            PrivatePort.ReadOnly = true;
-            NewPrivatePort.Enabled = false;
-
-            UDPRadioButton.Enabled = false;
-            TCPRadioButton.Enabled = false;
-
-            setHours.Enabled = false;
-            setMinutes.Enabled = false;
-            setSeconds.Enabled = false;
+                MessageBox.Show(string.Format("The port must be between {0}, and {1}", startingPort, endingPort), "Error");
+            }
         }
 
         private void ClosePort_Click(object sender, EventArgs e)
@@ -266,6 +263,7 @@ namespace Rupee
 
         private void PrivatePort_TextChanged(object sender, EventArgs e)
         {
+
             PrivatePortUsed = int.Parse(PrivatePort.Text);
         }
 
@@ -274,6 +272,26 @@ namespace Rupee
             PublicPortUsed = int.Parse(PublicPort.Text);
         }
 
+        private void PrivatePort_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            e.Handled = CheckChar(e);
+        }
 
+        private void PublicPort_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            e.Handled = CheckChar(e);
+        }
+
+        private static bool CheckChar(KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
 }

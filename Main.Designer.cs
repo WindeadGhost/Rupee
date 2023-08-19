@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainWin));
             GBAO = new GroupBox();
             label7 = new Label();
             label6 = new Label();
@@ -84,16 +85,16 @@
             GBAO.Size = new Size(381, 161);
             GBAO.TabIndex = 0;
             GBAO.TabStop = false;
-            GBAO.Text = "Options avancées";
+            GBAO.Text = "Advanced options";
             // 
             // label7
             // 
             label7.AutoSize = true;
             label7.Location = new Point(5, 125);
             label7.Name = "label7";
-            label7.Size = new Size(57, 15);
+            label7.Size = new Size(51, 15);
             label7.TabIndex = 10;
-            label7.Text = "Secondes";
+            label7.Text = "Seconds";
             // 
             // label6
             // 
@@ -109,14 +110,14 @@
             label1.AutoSize = true;
             label1.Location = new Point(5, 76);
             label1.Name = "label1";
-            label1.Size = new Size(44, 15);
+            label1.Size = new Size(39, 15);
             label1.TabIndex = 10;
-            label1.Text = "Heures";
+            label1.Text = "Hours";
             // 
             // PrivatePort
             // 
             PrivatePort.BorderStyle = BorderStyle.FixedSingle;
-            PrivatePort.Location = new Point(80, 21);
+            PrivatePort.Location = new Point(85, 20);
             PrivatePort.Margin = new Padding(3, 2, 3, 2);
             PrivatePort.MaximumSize = new Size(44, 20);
             PrivatePort.MaxLength = 5;
@@ -128,6 +129,7 @@
             PrivatePort.TextAlign = HorizontalAlignment.Center;
             PrivatePort.WordWrap = false;
             PrivatePort.TextChanged += PrivatePort_TextChanged;
+            PrivatePort.KeyPress += PrivatePort_KeyPress;
             // 
             // UDPRadioButton
             // 
@@ -177,6 +179,8 @@
             // 
             // setHours
             // 
+            setHours.BorderStyle = BorderStyle.FixedSingle;
+            setHours.InterceptArrowKeys = false;
             setHours.Location = new Point(80, 74);
             setHours.Margin = new Padding(3, 2, 3, 2);
             setHours.Maximum = new decimal(new int[] { 24, 0, 0, 0 });
@@ -189,13 +193,13 @@
             // 
             // NewPrivatePort
             // 
-            NewPrivatePort.Location = new Point(171, 20);
+            NewPrivatePort.Location = new Point(170, 20);
             NewPrivatePort.Margin = new Padding(3, 2, 3, 2);
             NewPrivatePort.Name = "NewPrivatePort";
             NewPrivatePort.Size = new Size(82, 22);
             NewPrivatePort.TabIndex = 6;
             NewPrivatePort.TabStop = false;
-            NewPrivatePort.Text = "Nouveau";
+            NewPrivatePort.Text = "Randomize";
             ToolTipRefresh.SetToolTip(NewPrivatePort, "Choisi un nouveau port disponible aléatoirement");
             NewPrivatePort.UseVisualStyleBackColor = true;
             NewPrivatePort.Click += NewPrivatePort_Click;
@@ -205,45 +209,45 @@
             label4.AutoSize = true;
             label4.Location = new Point(171, 52);
             label4.Name = "label4";
-            label4.Size = new Size(64, 15);
+            label4.Size = new Size(58, 15);
             label4.TabIndex = 3;
-            label4.Text = "Protocole :";
+            label4.Text = "Protocol :";
             // 
             // label3
             // 
             label3.AutoSize = true;
             label3.Location = new Point(5, 52);
             label3.Name = "label3";
-            label3.Size = new Size(101, 15);
+            label3.Size = new Size(96, 15);
             label3.TabIndex = 2;
-            label3.Text = "Durée de validité :";
+            label3.Text = "Period of validity";
             // 
             // label2
             // 
             label2.AutoSize = true;
             label2.Location = new Point(5, 22);
             label2.Name = "label2";
-            label2.Size = new Size(64, 15);
+            label2.Size = new Size(74, 15);
             label2.TabIndex = 1;
-            label2.Text = "Port privé :";
+            label2.Text = "Private port :";
             // 
             // MyIpText
             // 
             MyIpText.AutoSize = true;
             MyIpText.Location = new Point(35, 22);
             MyIpText.Name = "MyIpText";
-            MyIpText.Size = new Size(51, 15);
+            MyIpText.Size = new Size(43, 15);
             MyIpText.TabIndex = 1;
-            MyIpText.Text = "Mon IP :";
+            MyIpText.Text = "My IP :";
             // 
             // MyPortText
             // 
             MyPortText.AutoSize = true;
-            MyPortText.Location = new Point(203, 22);
+            MyPortText.Location = new Point(207, 22);
             MyPortText.Name = "MyPortText";
             MyPortText.Size = new Size(71, 15);
             MyPortText.TabIndex = 2;
-            MyPortText.Text = "Port public :";
+            MyPortText.Text = "Public Port :";
             // 
             // ShowAO
             // 
@@ -251,10 +255,10 @@
             ShowAO.Location = new Point(35, 98);
             ShowAO.Margin = new Padding(3, 2, 3, 2);
             ShowAO.Name = "ShowAO";
-            ShowAO.Size = new Size(174, 19);
+            ShowAO.Size = new Size(158, 19);
             ShowAO.TabIndex = 3;
             ShowAO.TabStop = false;
-            ShowAO.Text = "Activer les options avancées";
+            ShowAO.Text = "Enable advanced options";
             ShowAO.UseVisualStyleBackColor = true;
             ShowAO.CheckedChanged += ShowAO_CheckedChanged;
             // 
@@ -266,7 +270,7 @@
             NewPublicPort.Size = new Size(82, 22);
             NewPublicPort.TabIndex = 6;
             NewPublicPort.TabStop = false;
-            NewPublicPort.Text = "Nouveau";
+            NewPublicPort.Text = "Randomize";
             ToolTipRefresh.SetToolTip(NewPublicPort, "Choisi un nouveau port disponible aléatoirement");
             NewPublicPort.UseVisualStyleBackColor = true;
             NewPublicPort.Click += NewPublicPort_Click;
@@ -287,6 +291,7 @@
             PublicPort.TextAlign = HorizontalAlignment.Center;
             PublicPort.WordWrap = false;
             PublicPort.TextChanged += PublicPort_TextChanged;
+            PublicPort.KeyPress += PublicPort_KeyPress;
             // 
             // MyIp
             // 
@@ -312,7 +317,7 @@
             OpenPort.Name = "OpenPort";
             OpenPort.Size = new Size(114, 22);
             OpenPort.TabIndex = 11;
-            OpenPort.Text = "Ouvrir le port";
+            OpenPort.Text = "Open port";
             OpenPort.UseVisualStyleBackColor = true;
             OpenPort.Click += OpenPort_Click;
             // 
@@ -323,7 +328,7 @@
             ClosePort.Name = "ClosePort";
             ClosePort.Size = new Size(114, 22);
             ClosePort.TabIndex = 12;
-            ClosePort.Text = "Fermer le port";
+            ClosePort.Text = "Close port";
             ClosePort.UseVisualStyleBackColor = true;
             ClosePort.Click += ClosePort_Click;
             // 
@@ -345,16 +350,17 @@
             // RemainingTimeText
             // 
             RemainingTimeText.AutoSize = true;
-            RemainingTimeText.Location = new Point(281, 99);
+            RemainingTimeText.Location = new Point(270, 99);
             RemainingTimeText.Name = "RemainingTimeText";
-            RemainingTimeText.Size = new Size(86, 15);
+            RemainingTimeText.Size = new Size(97, 15);
             RemainingTimeText.TabIndex = 15;
-            RemainingTimeText.Text = "Temps restant :";
+            RemainingTimeText.Text = "Remaining time :";
             // 
             // MainWin
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            BackColor = SystemColors.Control;
             ClientSize = new Size(452, 326);
             Controls.Add(RemainingTimeText);
             Controls.Add(RemainingTime);
@@ -368,6 +374,7 @@
             Controls.Add(MyIpText);
             Controls.Add(GBAO);
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             Name = "MainWin";
             SizeGripStyle = SizeGripStyle.Hide;
